@@ -35,7 +35,6 @@ jobs:
 
       - name: Build APK
         run: |
-          mkdir -p dist
           p4a apk \
             --private . \
             --package org.example.faceapp \
@@ -44,14 +43,16 @@ jobs:
             --bootstrap=webview \
             --requirements=flask \
             --port=5000 \
-            --arch=armeabi-v7a \
-            --dist-dir=dist
+            --arch=armeabi-v7a
 
-      - name: List files in dist
-        run: ls -R dist
+      - name: Find generated APK
+        id: locate_apk
+        run: |
+          APK_PATH=$(find . -name "*.apk" | head -n 1)
+          echo "apk_path=$APK_PATH" >> $GITHUB_OUTPUT
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: faceapp-apk
-          path: dist/*.apk
+          path: ${{ steps.locate_apk.outputs.apk_path }}
