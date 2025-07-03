@@ -28,8 +28,10 @@ jobs:
             libncurses5-dev libgdbm-dev libnss3-dev libreadline-dev \
             liblzma-dev libxml2-dev libxslt-dev libltdl-dev
 
-      - name: Install python-for-android
-        run: pip install python-for-android
+      - name: Install python-for-android + Cython
+        run: |
+          pip install Cython
+          pip install python-for-android
 
       - name: Build APK
         run: |
