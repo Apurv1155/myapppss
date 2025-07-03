@@ -28,9 +28,9 @@ jobs:
             libncurses5-dev libgdbm-dev libnss3-dev libreadline-dev \
             liblzma-dev libxml2-dev libxslt-dev libltdl-dev
 
-      - name: Install python-for-android + Cython
+      - name: Install python-for-android + compatible Cython
         run: |
-          pip install Cython
+          pip install Cython==0.29.36
           pip install python-for-android
 
       - name: Build APK
