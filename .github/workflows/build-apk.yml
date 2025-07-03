@@ -1,0 +1,44 @@
+name: Build APK
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Install dependencies
+        run: |
+          sudo apt update
+          sudo apt install -y zip unzip openjdk-17-jdk python3-pip git build-essential \
+            libtool libffi-dev libssl-dev autoconf automake
+
+          pip install python-for-android
+
+      - name: Build APK
+        run: |
+          p4a apk \
+            --private . \
+            --package org.example.faceapp \
+            --name "FaceApp" \
+            --version 1.0 \
+            --bootstrap=webview \
+            --requirements=flask \
+            --port=5000
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: faceapp-apk
+          path: FaceApp-1.0-debug.apk
