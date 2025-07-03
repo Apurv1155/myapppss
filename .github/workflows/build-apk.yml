@@ -35,7 +35,8 @@ jobs:
             --version 1.0 \
             --bootstrap=webview \
             --requirements=flask \
-            --port=5000
+            --port=5000 \
+            --arch=armeabi-v7a
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
