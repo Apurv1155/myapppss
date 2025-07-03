@@ -26,7 +26,7 @@ jobs:
             libtool libffi-dev libssl-dev autoconf automake \
             pkg-config zlib1g-dev libbz2-dev libsqlite3-dev \
             libncurses5-dev libgdbm-dev libnss3-dev libreadline-dev \
-            liblzma-dev libxml2-dev libxslt-dev
+            liblzma-dev libxml2-dev libxslt-dev libltdl-dev
 
       - name: Install python-for-android
         run: pip install python-for-android
