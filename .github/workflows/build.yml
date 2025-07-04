@@ -1,46 +1,39 @@
-name: Build Flask HTML APK
+name: Build Flask HTML Android APK
 
 on:
-  workflow_dispatch:
+  push:
+    branches:
+      - main
 
 jobs:
-  build:
+  build-apk:
     runs-on: ubuntu-latest
 
     steps:
-    - name: ⬇️ Checkout repo
-      uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    - name: ⚙️ Set up Java & Gradle
-      uses: actions/setup-java@v4
-      with:
-        distribution: 'temurin'
-        java-version: '17'
+      - name: Set up JDK
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'temurin'
+          java-version: '17'
 
-    - name: 🧰 Install dependencies
-      run: |
-        sudo apt-get update -y
-        sudo apt-get install unzip wget -y
+      - name: Install Android SDK
+        uses: android-actions/setup-android@v2
 
-    - name: 🌐 Download WebView Android Template
-      run: |
-        wget https://github.com/vincentntang/flask-webview-android-template/archive/refs/heads/master.zip -O template.zip
-        unzip template.zip
-        mv flask-webview-android-template-master webview-template
+      - name: Clone WebView Template
+        run: |
+          git clone https://github.com/vincentntang/flask-webview-android-template webview-app
+          cp -r app/index.html webview-app/app/src/main/assets/index.html
 
-    - name: 📂 Copy HTML files into Android project
-      run: |
-        mkdir -p webview-template/app/src/main/assets/
-        cp app/index.html webview-template/app/src/main/assets/
+      - name: Build APK
+        run: |
+          cd webview-app
+          ./gradlew assembleDebug
 
-    - name: ⚡️ Build APK
-      run: |
-        cd webview-template
-        chmod +x gradlew
-        ./gradlew assembleDebug
-
-    - name: 📤 Upload APK
-      uses: actions/upload-artifact@v4
-      with:
-        name: FlaskWebviewApp
-        path: webview-template/app/build/outputs/apk/debug/app-debug.apk
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: flask-html-app
+          path: webview-app/app/build/outputs/apk/debug/app-debug.apk
