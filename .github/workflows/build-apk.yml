@@ -1,4 +1,4 @@
-name: Build Flask HTML APK
+name: Build Flask HTML APK with Camera and Storage
 
 on:
   push:
@@ -21,10 +21,16 @@ jobs:
 
       - name: Install Dependencies
         run: |
-          pip install --user python-for-android
+          sudo apt-get update
+          sudo apt-get install -y unzip zip wget autoconf libtool pkg-config openjdk-17-jdk lld ccache
+
+          pip install --user python-for-android flask
 
       - name: Prepare Flask App
         run: |
+          mkdir -p templates static
+          echo '<!DOCTYPE html><html><body><h1>Flask WebView App</h1><button onclick="startCamera()">Open Camera</button><script>function startCamera() { navigator.mediaDevices.getUserMedia({ video: true }).then(stream => { const video = document.createElement("video"); video.srcObject = stream; video.play(); document.body.appendChild(video); }).catch(err => alert("Camera error: " + err)); }</script></body></html>' > templates/index.html
+
           echo "from flask import Flask, render_template" > main.py
           echo "app = Flask(__name__, static_folder='static', template_folder='templates')" >> main.py
           echo "@app.route('/')\ndef index():\n    return render_template('index.html')" >> main.py
@@ -32,10 +38,7 @@ jobs:
 
       - name: Build APK
         run: |
-          sudo apt update
-          sudo apt install -y zip unzip libncurses5 openjdk-17-jdk wget ccache lld autoconf libtool pkg-config
           export PATH=$PATH:$HOME/.local/bin
-
           p4a apk \
             --private . \
             --package=org.example.flaskapp \
@@ -45,9 +48,11 @@ jobs:
             --port=5000 \
             --requirements=flask \
             --permission=INTERNET \
+            --permission=CAMERA \
+            --permission=WRITE_EXTERNAL_STORAGE \
+            --permission=READ_EXTERNAL_STORAGE \
             --arch=armeabi-v7a \
-            --output FlaskApp.apk \
-            --sdk-dir="$HOME/android-sdk"
+            --output FlaskApp.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
