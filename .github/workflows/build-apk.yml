@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
+      - name: Checkout source
         uses: actions/checkout@v3
 
       - name: Set up Python
@@ -29,9 +29,9 @@ jobs:
             liblzma-dev libxml2-dev libxslt-dev libltdl-dev \
             lld
 
-      - name: Install python-for-android and dependencies
+      - name: Install python-for-android & fix NumPy version
         run: |
-          pip install Cython==0.29.36
+          pip install "Cython==0.29.36" "numpy==1.19.5"
           pip install python-for-android
 
       - name: Build APK
@@ -41,22 +41,25 @@ jobs:
             --package org.example.faceapp \
             --name "FaceApp" \
             --version 1.0 \
-            --bootstrap=webview \
+            --bootstrap webview \
             --requirements=flask,opencv-python-headless==4.5.5.64,numpy==1.19.5 \
-            --port=5000 \
-            --arch=armeabi-v7a \
-            --permission=INTERNET \
-            --permission=CAMERA \
-            --permission=WRITE_EXTERNAL_STORAGE
+            --arch armeabi-v7a \
+            --permission INTERNET \
+            --permission CAMERA \
+            --permission WRITE_EXTERNAL_STORAGE \
+            --permission READ_EXTERNAL_STORAGE \
+            --copy-libs \
+            --debug \
+            --verbose
 
-      - name: Locate APK
-        id: find_apk
+      - name: Find APK
+        id: locate_apk
         run: |
-          APK_PATH=$(find . -name "*.apk" | head -n 1)
-          echo "apk_path=$APK_PATH" >> $GITHUB_OUTPUT
+          APK_PATH=$(find . -name "*-debug.apk" | head -n 1)
+          echo "apk_path=$APK_PATH" >> "$GITHUB_OUTPUT"
 
-      - name: Upload APK artifact
+      - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: faceapp-apk
-          path: ${{ steps.find_apk.outputs.apk_path }}
+          name: FaceApp-APK
+          path: ${{ steps.locate_apk.outputs.apk_path }}
