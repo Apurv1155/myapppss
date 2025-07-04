@@ -1,54 +1,56 @@
-name: Build APK
+name: Build Flask HTML APK
 
 on:
+  push:
+    branches:
+      - main
   workflow_dispatch:
 
 jobs:
-  build:
+  build-apk:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v3
+      - name: Checkout Code
+        uses: actions/checkout@v3
 
-    - name: Set up Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: '3.10'
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.10"
 
-    - name: Install dependencies
-      run: |
-        sudo apt update
-        sudo apt install -y zip unzip openjdk-17-jdk lld \
-          libffi-dev libssl-dev automake autoconf libtool pkg-config
+      - name: Install Dependencies
+        run: |
+          pip install --user python-for-android
 
-        pip install --upgrade pip
-        pip install Cython==0.29.36
-        pip install numpy==1.19.5
-        pip install opencv-python-headless flask
-        pip install python-for-android
+      - name: Prepare Flask App
+        run: |
+          echo "from flask import Flask, render_template" > main.py
+          echo "app = Flask(__name__, static_folder='static', template_folder='templates')" >> main.py
+          echo "@app.route('/')\ndef index():\n    return render_template('index.html')" >> main.py
+          echo "if __name__ == '__main__':\n    app.run(host='0.0.0.0', port=5000)" >> main.py
 
-    - name: Build APK
-      run: |
-        p4a apk \
-          --private . \
-          --package org.example.faceapp \
-          --name "FaceApp" \
-          --version 1.0 \
-          --bootstrap webview \
-          --requirements=flask,numpy==1.19.5,opencv-python-headless \
-          --arch armeabi-v7a \
-          --permission INTERNET \
-          --permission CAMERA \
-          --permission WRITE_EXTERNAL_STORAGE \
-          --permission READ_EXTERNAL_STORAGE \
-          --copy-libs \
-          --debug
+      - name: Build APK
+        run: |
+          sudo apt update
+          sudo apt install -y zip unzip libncurses5 openjdk-17-jdk wget ccache lld autoconf libtool pkg-config
+          export PATH=$PATH:$HOME/.local/bin
 
-    - name: Upload APK
-      uses: actions/upload-artifact@v4
-      with:
-        name: FaceApp-APK
-        path: |
-          ./bin/*.apk
- 
+          p4a apk \
+            --private . \
+            --package=org.example.flaskapp \
+            --name="FlaskApp" \
+            --version=1.0 \
+            --bootstrap=webview \
+            --port=5000 \
+            --requirements=flask \
+            --permission=INTERNET \
+            --arch=armeabi-v7a \
+            --output FlaskApp.apk \
+            --sdk-dir="$HOME/android-sdk"
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v3
+        with:
+          name: FlaskApp-APK
+          path: FlaskApp.apk
