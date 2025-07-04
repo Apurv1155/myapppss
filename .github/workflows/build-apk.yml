@@ -41,7 +41,7 @@ jobs:
             --name "FaceApp" \
             --version 1.0 \
             --bootstrap=webview \
-            --requirements=flask,opencv-python \
+            --requirements=requirements.txt \
             --port=5000 \
             --arch=armeabi-v7a \
             --permission=INTERNET \
