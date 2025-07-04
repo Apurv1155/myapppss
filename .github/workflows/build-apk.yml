@@ -1,9 +1,6 @@
-name: Build Flask HTML APK with Camera and Storage
+name: Build Flask APK with WebView
 
 on:
-  push:
-    branches:
-      - main
   workflow_dispatch:
 
 jobs:
@@ -11,51 +8,40 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout Code
-        uses: actions/checkout@v3
+    - name: Checkout Repository
+      uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: "3.10"
+    - name: Setup Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.10'
 
-      - name: Install Dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y unzip zip wget autoconf libtool pkg-config openjdk-17-jdk lld ccache
+    - name: Install dependencies
+      run: |
+        pip install buildozer cython
+        sudo apt update
+        sudo apt install -y zip unzip openjdk-17-jdk autoconf libtool pkg-config git python3-dev
 
-          pip install --user python-for-android flask
+    - name: Install buildozer and dependencies
+      run: |
+        sudo apt install -y libffi-dev libssl-dev libjpeg-dev zlib1g-dev
+        pip install --upgrade pip setuptools wheel
 
-      - name: Prepare Flask App
-        run: |
-          mkdir -p templates static
-          echo '<!DOCTYPE html><html><body><h1>Flask WebView App</h1><button onclick="startCamera()">Open Camera</button><script>function startCamera() { navigator.mediaDevices.getUserMedia({ video: true }).then(stream => { const video = document.createElement("video"); video.srcObject = stream; video.play(); document.body.appendChild(video); }).catch(err => alert("Camera error: " + err)); }</script></body></html>' > templates/index.html
+    - name: Build APK
+      run: |
+        buildozer init
+        sed -i 's/^source.include_exts.*/source.include_exts = py,png,jpg,kv,atlas,html,js,css/' buildozer.spec
+        sed -i 's/^# requirements.*/requirements = python3,flask/' buildozer.spec
+        sed -i 's/^# android.permissions.*/android.permissions = INTERNET/' buildozer.spec
+        sed -i 's/^# android.minapi.*/android.minapi = 21/' buildozer.spec
+        sed -i 's/^# android.sdk.*/android.sdk = 33/' buildozer.spec
+        sed -i 's/^# android.ndk.*/android.ndk = 25b/' buildozer.spec
+        sed -i 's/^# android.api.*/android.api = 33/' buildozer.spec
+        sed -i 's/^# android.bootstrap.*/android.bootstrap = webview/' buildozer.spec
+        buildozer -v android debug
 
-          echo "from flask import Flask, render_template" > main.py
-          echo "app = Flask(__name__, static_folder='static', template_folder='templates')" >> main.py
-          echo "@app.route('/')\ndef index():\n    return render_template('index.html')" >> main.py
-          echo "if __name__ == '__main__':\n    app.run(host='0.0.0.0', port=5000)" >> main.py
-
-      - name: Build APK
-        run: |
-          export PATH=$PATH:$HOME/.local/bin
-          p4a apk \
-            --private . \
-            --package=org.example.flaskapp \
-            --name="FlaskApp" \
-            --version=1.0 \
-            --bootstrap=webview \
-            --port=5000 \
-            --requirements=flask \
-            --permission=INTERNET \
-            --permission=CAMERA \
-            --permission=WRITE_EXTERNAL_STORAGE \
-            --permission=READ_EXTERNAL_STORAGE \
-            --arch=armeabi-v7a \
-            --output FlaskApp.apk
-
-      - name: Upload APK
-        uses: actions/upload-artifact@v4
-        with:
-          name: FlaskApp-APK
-          path: FlaskApp.apk
+    - name: Upload APK
+      uses: actions/upload-artifact@v4
+      with:
+        name: Flask-WebView-APK
+        path: bin/*.apk
