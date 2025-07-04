@@ -1,8 +1,6 @@
-name: Build Android APK
+name: Build APK
 
 on:
-  push:
-    branches: [ main ]
   workflow_dispatch:
 
 jobs:
@@ -10,57 +8,46 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout source
-        uses: actions/checkout@v3
+    - name: Checkout code
+      uses: actions/checkout@v3
 
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.10'
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
 
-      - name: Install system dependencies
-        run: |
-          sudo apt update
-          sudo apt install -y \
-            zip unzip openjdk-17-jdk python3-pip git build-essential \
-            libtool libffi-dev libssl-dev autoconf automake \
-            pkg-config zlib1g-dev libbz2-dev libsqlite3-dev \
-            libncurses5-dev libgdbm-dev libnss3-dev libreadline-dev \
-            liblzma-dev libxml2-dev libxslt-dev libltdl-dev \
-            lld
+    - name: Install dependencies
+      run: |
+        sudo apt update
+        sudo apt install -y zip unzip openjdk-17-jdk lld \
+          libffi-dev libssl-dev automake autoconf libtool pkg-config
 
-      - name: Install python-for-android and compatible NumPy
-        run: |
-          pip install Cython==0.29.36
-          pip install numpy==1.19.5
-          pip install python-for-android
+        pip install --upgrade pip
+        pip install Cython==0.29.36
+        pip install numpy==1.19.5
+        pip install opencv-python-headless flask
+        pip install python-for-android
 
-      - name: Build APK
-        run: |
-          p4a apk \
-            --private . \
-            --package org.example.faceapp \
-            --name "FaceApp" \
-            --version 1.0 \
-            --bootstrap webview \
-            --requirements=flask,opencv-python-headless==4.5.5.64,numpy==1.19.5 \
-            --arch armeabi-v7a \
-            --permission INTERNET \
-            --permission CAMERA \
-            --permission WRITE_EXTERNAL_STORAGE \
-            --permission READ_EXTERNAL_STORAGE \
-            --copy-libs \
-            --debug \
-            --verbose
+    - name: Build APK
+      run: |
+        p4a apk \
+          --private . \
+          --package org.example.faceapp \
+          --name "FaceApp" \
+          --version 1.0 \
+          --bootstrap webview \
+          --requirements=flask,numpy==1.19.5,opencv-python-headless \
+          --arch armeabi-v7a \
+          --permission INTERNET \
+          --permission CAMERA \
+          --permission WRITE_EXTERNAL_STORAGE \
+          --permission READ_EXTERNAL_STORAGE \
+          --copy-libs \
+          --debug
 
-      - name: Locate APK
-        id: locate_apk
-        run: |
-          APK_PATH=$(find . -name "*-debug.apk" | head -n 1)
-          echo "apk_path=$APK_PATH" >> "$GITHUB_OUTPUT"
-
-      - name: Upload APK
-        uses: actions/upload-artifact@v4
-        with:
-          name: FaceApp-APK
-          path: ${{ steps.locate_apk.outputs.apk_path }}
+    - name: Upload APK
+      uses: actions/upload-artifact@v4
+      with:
+        name: FaceApp-APK
+        path: |
+          ./bin/*.apk
