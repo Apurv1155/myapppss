@@ -1,39 +1,139 @@
-name: Build Flask HTML Android APK
+name: Build WebView APK
 
 on:
-  push:
-    branches:
-      - main
+  workflow_dispatch:
 
 jobs:
-  build-apk:
+  build:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
+      - name: Checkout your code
         uses: actions/checkout@v4
 
-      - name: Set up JDK
+      - name: Set up JDK 17
         uses: actions/setup-java@v3
         with:
           distribution: 'temurin'
-          java-version: '17'
+          java-version: 17
 
       - name: Install Android SDK
         uses: android-actions/setup-android@v2
 
-      - name: Clone WebView Template
+      - name: Generate WebView Android Project
         run: |
-          git clone https://github.com/vincentntang/flask-webview-android-template webview-app
-          cp -r app/index.html webview-app/app/src/main/assets/index.html
+          mkdir -p android-app/app/src/main/java/com/example/webview
+          mkdir -p android-app/app/src/main/res/values
+          mkdir -p android-app/app/src/main/assets
+
+          # Copy your HTML
+          cp app/index.html android-app/app/src/main/assets/index.html
+
+          # MainActivity.java
+          cat > android-app/app/src/main/java/com/example/webview/MainActivity.java <<EOF
+          package com.example.webview;
+
+          import android.app.Activity;
+          import android.os.Bundle;
+          import android.webkit.WebView;
+          import android.webkit.WebViewClient;
+
+          public class MainActivity extends Activity {
+              @Override
+              protected void onCreate(Bundle savedInstanceState) {
+                  super.onCreate(savedInstanceState);
+                  WebView webView = new WebView(this);
+                  webView.getSettings().setJavaScriptEnabled(true);
+                  webView.setWebViewClient(new WebViewClient());
+                  webView.loadUrl("file:///android_asset/index.html");
+                  setContentView(webView);
+              }
+          }
+          EOF
+
+          # AndroidManifest.xml
+          cat > android-app/app/src/main/AndroidManifest.xml <<EOF
+          <manifest xmlns:android="http://schemas.android.com/apk/res/android"
+              package="com.example.webview">
+              <application android:label="WebViewApp" android:theme="@android:style/Theme.Material.Light.NoActionBar">
+                  <activity android:name=".MainActivity"
+                      android:exported="true"
+                      android:label="WebViewApp">
+                      <intent-filter>
+                          <action android:name="android.intent.action.MAIN" />
+                          <category android:name="android.intent.category.LAUNCHER" />
+                      </intent-filter>
+                  </activity>
+              </application>
+          </manifest>
+          EOF
+
+          # strings.xml
+          echo '<resources><string name="app_name">WebViewApp</string></resources>' \
+          > android-app/app/src/main/res/values/strings.xml
+
+          # build.gradle (Project)
+          cat > android-app/build.gradle <<EOF
+          buildscript {
+              repositories {
+                  google()
+                  mavenCentral()
+              }
+              dependencies {
+                  classpath 'com.android.tools.build:gradle:8.1.0'
+              }
+          }
+          allprojects {
+              repositories {
+                  google()
+                  mavenCentral()
+              }
+          }
+          EOF
+
+          # settings.gradle
+          echo "include ':app'" > android-app/settings.gradle
+
+          # build.gradle (App)
+          cat > android-app/app/build.gradle <<EOF
+          plugins {
+              id 'com.android.application'
+          }
+
+          android {
+              namespace 'com.example.webview'
+              compileSdk 33
+
+              defaultConfig {
+                  applicationId "com.example.webview"
+                  minSdk 21
+                  targetSdk 33
+                  versionCode 1
+                  versionName "1.0"
+              }
+
+              buildTypes {
+                  release {
+                      minifyEnabled false
+                      proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+                  }
+              }
+          }
+
+          dependencies {}
+          EOF
+
+          # gradle wrapper
+          cd android-app
+          gradle wrapper
 
       - name: Build APK
         run: |
-          cd webview-app
+          cd android-app
           ./gradlew assembleDebug
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: flask-html-app
-          path: webview-app/app/build/outputs/apk/debug/app-debug.apk
+          name: webview-apk
+          path: android-app/app/build/outputs/apk/debug/app-debug.apk
