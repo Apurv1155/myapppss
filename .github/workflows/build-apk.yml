@@ -29,9 +29,10 @@ jobs:
             liblzma-dev libxml2-dev libxslt-dev libltdl-dev \
             lld
 
-      - name: Install python-for-android & fix NumPy version
+      - name: Install python-for-android and compatible NumPy
         run: |
-          pip install "Cython==0.29.36" "numpy==1.19.5"
+          pip install Cython==0.29.36
+          pip install numpy==1.19.5
           pip install python-for-android
 
       - name: Build APK
@@ -52,7 +53,7 @@ jobs:
             --debug \
             --verbose
 
-      - name: Find APK
+      - name: Locate APK
         id: locate_apk
         run: |
           APK_PATH=$(find . -name "*-debug.apk" | head -n 1)
