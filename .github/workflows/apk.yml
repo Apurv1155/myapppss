@@ -1,0 +1,46 @@
+name: Build Flask HTML APK
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: ⬇️ Checkout repo
+      uses: actions/checkout@v4
+
+    - name: ⚙️ Set up Java & Gradle
+      uses: actions/setup-java@v4
+      with:
+        distribution: 'temurin'
+        java-version: '17'
+
+    - name: 🧰 Install dependencies
+      run: |
+        sudo apt-get update -y
+        sudo apt-get install unzip wget -y
+
+    - name: 🌐 Download WebView Android Template
+      run: |
+        wget https://github.com/vincentntang/flask-webview-android-template/archive/refs/heads/master.zip -O template.zip
+        unzip template.zip
+        mv flask-webview-android-template-master webview-template
+
+    - name: 📂 Copy HTML files into Android project
+      run: |
+        mkdir -p webview-template/app/src/main/assets/
+        cp app/index.html webview-template/app/src/main/assets/
+
+    - name: ⚡️ Build APK
+      run: |
+        cd webview-template
+        chmod +x gradlew
+        ./gradlew assembleDebug
+
+    - name: 📤 Upload APK
+      uses: actions/upload-artifact@v4
+      with:
+        name: FlaskWebviewApp
+        path: webview-template/app/build/outputs/apk/debug/app-debug.apk
