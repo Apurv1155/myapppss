@@ -1,47 +1,47 @@
-name: Build Flask APK with WebView
+name: Build Flask + HTML Android APK
 
 on:
   workflow_dispatch:
 
 jobs:
-  build-apk:
+  build:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout Repository
+    - name: ⬇️ Checkout repository
       uses: actions/checkout@v4
 
-    - name: Setup Python
+    - name: ⚙️ Set up Python
       uses: actions/setup-python@v5
       with:
         python-version: '3.10'
 
-    - name: Install dependencies
+    - name: 📦 Install dependencies
       run: |
-        pip install buildozer cython
-        sudo apt update
-        sudo apt install -y zip unzip openjdk-17-jdk autoconf libtool pkg-config git python3-dev
+        python -m pip install --upgrade pip
+        pip install flask
 
-    - name: Install buildozer and dependencies
+    - name: 🧱 Install Android SDK
+      uses: android-actions/setup-android@v3
+
+    - name: 🧰 Setup Gradle + WebView template
       run: |
-        sudo apt install -y libffi-dev libssl-dev libjpeg-dev zlib1g-dev
-        pip install --upgrade pip setuptools wheel
+        sudo apt-get install unzip wget -y
+        wget https://github.com/vincentntang/flask-webview-android-template/archive/refs/heads/master.zip -O template.zip
+        unzip template.zip
+        mv flask-webview-android-template-master webview-template
 
-    - name: Build APK
+        cp app/index.html webview-template/app/src/main/assets/index.html
+        cp app/main.py webview-template/app/src/main/assets/main.py
+
+    - name: 🛠️ Build APK
       run: |
-        buildozer init
-        sed -i 's/^source.include_exts.*/source.include_exts = py,png,jpg,kv,atlas,html,js,css/' buildozer.spec
-        sed -i 's/^# requirements.*/requirements = python3,flask/' buildozer.spec
-        sed -i 's/^# android.permissions.*/android.permissions = INTERNET/' buildozer.spec
-        sed -i 's/^# android.minapi.*/android.minapi = 21/' buildozer.spec
-        sed -i 's/^# android.sdk.*/android.sdk = 33/' buildozer.spec
-        sed -i 's/^# android.ndk.*/android.ndk = 25b/' buildozer.spec
-        sed -i 's/^# android.api.*/android.api = 33/' buildozer.spec
-        sed -i 's/^# android.bootstrap.*/android.bootstrap = webview/' buildozer.spec
-        buildozer -v android debug
+        cd webview-template
+        chmod +x gradlew
+        ./gradlew assembleDebug
 
-    - name: Upload APK
+    - name: 📤 Upload APK
       uses: actions/upload-artifact@v4
       with:
         name: Flask-WebView-APK
-        path: bin/*.apk
+        path: webview-template/app/build/outputs/apk/debug/app-debug.apk
